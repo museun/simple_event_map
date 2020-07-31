@@ -1,0 +1,17 @@
+[package]
+name    = "simple_event_map"
+version = "0.1.0"
+authors = ["museun <museun@outlook.com>"]
+
+edition = "2018"
+license = "0BSD"
+readme = "README.md"
+
+description = "a simple event map based on channels, provides a receiver that is either blocking or async"
+repository = "https://github.com/museun/simple_event_map"
+documentation = "https://docs.rs/simple_event_map"
+
+[dependencies]
+async-channel    = "1.4.0"
+pin-project-lite = "0.1.7"
+futures-lite     = "0.1.10"
