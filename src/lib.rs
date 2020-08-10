@@ -1,4 +1,4 @@
-//! # simple_event_stream
+//! # simple_event_map
 //!
 //! This allows you to register types that'll be broadcast to receivers
 //!

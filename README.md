@@ -1,7 +1,5 @@
 # simple_event_map
 
-## simple_event_stream
-
 This allows you to register types that'll be broadcast to receivers
 
 ### An example
