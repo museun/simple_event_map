@@ -1,5 +1,7 @@
 # simple_event_map
 
+# NOTE this has moved to https://github.com/museun/twitchchat/tree/dev/simple_event_map
+
 This allows you to register types that'll be broadcast to receivers
 
 ### An example
