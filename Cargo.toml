@@ -2,9 +2,8 @@
 name    = "simple_event_map"
 version = "0.1.0"
 authors = ["museun <museun@outlook.com>"]
-
 edition = "2018"
-license = "0BSD"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 description = "a simple event map based on channels, provides a receiver that is either blocking or async"

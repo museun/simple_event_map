@@ -39,4 +39,9 @@ assert_eq!(map.send(msg.clone()), true);
 assert_eq!(map.active::<Message>(), 1);
 ```
 
-License: 0BSD
+## License
+`simple__event_map` is primarily distributed under the terms of both the MIT license and the Apache License (Version 2.0).
+
+See [LICENSE-APACHE][APACHE] and [LICENSE-MIT][MIT] for details.
+[APACHE]: ./LICENSE-APACHE
+[MIT]: ./LICENSE-MIT
