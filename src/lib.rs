@@ -5,6 +5,8 @@
 //! ## An example
 //! ```rust
 //! # use simple_event_map::{EventMap, EventStream};
+//! # use futures_lite::StreamExt as _;
+//! # futures_lite::future::block_on(async move {
 //! #[derive(Clone, Debug, PartialEq)]
 //! struct Message { data: String }
 //!
@@ -15,10 +17,10 @@
 //! assert_eq!(map.is_empty::<Message>(), true);
 //!
 //! // register two subscriptions for the message
-//! // this returns an `EventStream`
-//! // which can be used as a blocking Iterator or as an async Stream
-//! let mut m1 = map.register::<Message>();
-//! let mut m2 = map.register::<Message>();
+//! // you can get a blocking iterator
+//! let mut m1 = map.register_iter::<Message>();
+//! // or you can get an async stream
+//! let mut m2 = map.register_stream::<Message>();
 //!
 //! let msg = Message{ data: String::from("hello world") };
 //! // send the message, will return a bool if any messages were sent
@@ -27,7 +29,8 @@
 //! assert_eq!(map.active::<Message>(), 2);
 //!
 //! assert_eq!(m1.next().unwrap(), msg);
-//! assert_eq!(m2.next().unwrap(), msg);
+//! // m2 is a stream, so we have to await it (and use StreamExt::next)
+//! assert_eq!(m2.next().await.unwrap(), msg);
 //!
 //! // drop a subscription (will be cleaned up in the eventmap on next send)
 //! drop(m1);
@@ -36,13 +39,17 @@
 //! assert_eq!(map.send(msg.clone()), true);
 //! // we only have 1 active now
 //! assert_eq!(map.active::<Message>(), 1);
+//! # });
 //! ```
 
 mod channel;
 pub use channel::Sender;
 
-mod event_stream;
-pub use event_stream::EventStream;
+mod stream;
+pub use stream::EventStream;
+
+mod iter;
+pub use iter::EventIter;
 
 mod event_map;
 

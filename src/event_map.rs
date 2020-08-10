@@ -1,4 +1,4 @@
-use crate::{EventStream, Sender};
+use crate::{EventIter, EventStream, Sender};
 
 use std::{
     any::{Any, TypeId},
@@ -26,7 +26,7 @@ impl EventMap {
     }
 
     /// Register this type with the EventMap, returning a clonable Receiver end
-    pub fn register<T: Clone + 'static>(&mut self) -> EventStream<T> {
+    pub fn register_stream<T: Clone + 'static>(&mut self) -> EventStream<T> {
         let (tx, rx) = crate::channel::unbounded();
         self.inner
             .entry(TypeId::of::<T>())
@@ -34,6 +34,17 @@ impl EventMap {
             .push((Id(self.id), Box::new(tx)));
         self.id += 1;
         EventStream { inner: rx }
+    }
+
+    /// Register this type with the EventMap, returning a clonable Receiver end
+    pub fn register_iter<T: Clone + 'static>(&mut self) -> EventIter<T> {
+        let (tx, rx) = crate::channel::unbounded();
+        self.inner
+            .entry(TypeId::of::<T>())
+            .or_default()
+            .push((Id(self.id), Box::new(tx)));
+        self.id += 1;
+        EventIter { inner: rx }
     }
 
     /// Send this message to anything listening for it
@@ -130,6 +141,69 @@ impl<'a, T: 'static> Iterator for Senders<'a, T> {
 mod tests {
     use super::*;
     #[test]
+    fn event_map_async() {
+        futures_lite::future::block_on(async move {
+            use futures_lite::StreamExt as _;
+
+            #[derive(Clone, Debug, PartialEq)]
+            struct Message {
+                data: String,
+            }
+
+            let mut map = EventMap::new();
+
+            // subscriptions are initially empty
+            assert_eq!(map.is_empty::<i32>(), true);
+            assert_eq!(map.is_empty::<String>(), true);
+            assert_eq!(map.is_empty::<Message>(), true);
+
+            // subscribe two i32 twice
+            assert_eq!(map.active::<i32>(), 0);
+            let mut i1 = map.register_stream::<i32>();
+            let mut i2 = map.register_stream::<i32>();
+            // we should have 2 subscriptions active
+            assert_eq!(map.active::<i32>(), 2);
+
+            // subscribe to our custom type twice
+            assert_eq!(map.active::<Message>(), 0);
+            let mut m1 = map.register_stream::<Message>();
+            let mut m2 = map.register_stream::<Message>();
+            assert_eq!(map.active::<Message>(), 2);
+
+            // send an i32
+            assert_eq!(map.send(42_i32), true);
+
+            // send our message
+            let msg = Message {
+                data: String::from("hello world"),
+            };
+            assert_eq!(map.send(msg.clone()), true);
+
+            // will block until we get our number
+            assert_eq!(i1.next().await.unwrap(), 42);
+            // and the other one will also get it
+            assert_eq!(i2.next().await.unwrap(), 42);
+
+            // will block until we get our message
+            assert_eq!(m1.next().await.unwrap(), msg);
+            // and the other one will also get it
+            assert_eq!(m2.next().await.unwrap(), msg);
+
+            // no one is listening for () so this'll return false
+            assert_eq!(map.send(()), false);
+
+            // drop a subscription
+            drop(i1);
+            // and send a new value
+            assert_eq!(map.send(43_i32), true);
+            // only i2 will get it
+            assert_eq!(i2.next().await.unwrap(), 43);
+            // and it cleaned up the dropped subscription
+            assert_eq!(map.active::<i32>(), 1);
+        });
+    }
+
+    #[test]
     fn event_map() {
         #[derive(Clone, Debug, PartialEq)]
         struct Message {
@@ -145,15 +219,15 @@ mod tests {
 
         // subscribe two i32 twice
         assert_eq!(map.active::<i32>(), 0);
-        let mut i1 = map.register::<i32>();
-        let mut i2 = map.register::<i32>();
+        let mut i1 = map.register_iter::<i32>();
+        let mut i2 = map.register_iter::<i32>();
         // we should have 2 subscriptions active
         assert_eq!(map.active::<i32>(), 2);
 
         // subscribe to our custom type twice
         assert_eq!(map.active::<Message>(), 0);
-        let mut m1 = map.register::<Message>();
-        let mut m2 = map.register::<Message>();
+        let mut m1 = map.register_iter::<Message>();
+        let mut m2 = map.register_iter::<Message>();
         assert_eq!(map.active::<Message>(), 2);
 
         // send an i32
